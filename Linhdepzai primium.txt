@@ -1,0 +1,126 @@
+repeat task.wait() until game:IsLoaded()
+
+local CoreGui = game:GetService("CoreGui")
+if CoreGui:FindFirstChild("LinhPremiumV26") then CoreGui.LinhPremiumV26:Destroy() end
+
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+
+-- CẤU HÌNH MENU NHỎ GỌN
+local MAIN_SIZE = UDim2.new(0, 170, 0, 150) -- Tăng nhẹ chiều cao để chứa nút Server
+
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "LinhPremiumV26"
+
+-- 1. NÚT MỞ MENU (HÌNH QUỶ NHỎ)
+local MiniBtn = Instance.new("ImageButton", ScreenGui)
+MiniBtn.Size = UDim2.new(0, 35, 0, 35)
+MiniBtn.Position = UDim2.new(0.9, 0, 0.05, 0)
+MiniBtn.Image = "rbxassetid://16447545938" -- ID ảnh Quỷ Nhỏ
+MiniBtn.BackgroundTransparency = 1
+MiniBtn.Active, MiniBtn.Draggable = true, true
+Instance.new("UICorner", MiniBtn).CornerRadius = UDim.new(1, 0)
+local MiniStroke = Instance.new("UIStroke", MiniBtn)
+
+-- 2. GIAO DIỆN CHÍNH (BANANA STYLE)
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = MAIN_SIZE
+Main.Position = UDim2.new(0.75, 0, 0.1, 0)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.Visible = false
+Main.Active, Main.Draggable = true, true
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+local MainStroke = Instance.new("UIStroke", Main)
+MainStroke.Thickness = 2
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "Linhdepzai (primium)"
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 13
+
+local function CreateBtn(name, pos, color)
+    local btn = Instance.new("TextButton", Main)
+    btn.Size = UDim2.new(0.9, 0, 0, 25)
+    btn.Position = pos
+    btn.BackgroundColor3 = color or Color3.fromRGB(30, 30, 30)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = name
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+    return btn
+end
+
+-- CÁC NÚT CHỨC NĂNG
+local KillStayBtn = CreateBtn("QUÉT SẠCH MAP", UDim2.new(0.05, 0, 0.25, 0))
+local SpeedBtn = CreateBtn("CHẠY NHANH: OFF", UDim2.new(0.05, 0, 0.48, 0))
+local HopBtn = CreateBtn("ĐỔI SERVER", UDim2.new(0.05, 0, 0.72, 0), Color3.fromRGB(60, 0, 0))
+
+local kill_stay_on, speed_on = false, false
+
+-- 3. HỆ THỐNG RGB & CHẠY NHANH
+RunService.Stepped:Connect(function()
+    local color = Color3.fromHSV(tick() % 3 / 3, 1, 1)
+    MiniStroke.Color = color
+    MainStroke.Color = color
+    Title.TextColor3 = color
+    KillStayBtn.TextColor3 = color
+    SpeedBtn.TextColor3 = color
+    -- Nút Hop không để RGB chữ để dễ phân biệt
+
+    if speed_on and Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = 100
+    end
+end)
+
+-- 4. QUÉT MAP MAX RANGE (KHÔNG DMG)
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local tool = Player.Character:FindFirstChildOfClass("Tool") or Player.Backpack:FindFirstChildOfClass("Tool")
+        if not tool or not kill_stay_on then return end
+        tool.Parent = Player.Character
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= Player and v.Character and v.Character.Humanoid.Health > 0 then
+                local hrp = v.Character.HumanoidRootPart
+                if (Player.Character.HumanoidRootPart.Position - hrp.Position).Magnitude < 5000 then
+                    local oldCF = hrp.CFrame
+                    hrp.CFrame = Player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+                    tool:Activate()
+                    task.wait()
+                    hrp.CFrame = oldCF
+                end
+            end
+        end
+    end)
+end)
+
+-- 5. ĐIỀU KHIỂN
+MiniBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+
+KillStayBtn.MouseButton1Click:Connect(function()
+    kill_stay_on = not kill_stay_on
+    KillStayBtn.BackgroundColor3 = kill_stay_on and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(30, 30, 30)
+end)
+
+SpeedBtn.MouseButton1Click:Connect(function()
+    speed_on = not speed_on
+    SpeedBtn.Text = "CHẠY NHANH: " .. (speed_on and "ON" or "OFF")
+    SpeedBtn.BackgroundColor3 = speed_on and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(30, 30, 30)
+end)
+
+-- NÚT ĐỔI SERVER
+HopBtn.MouseButton1Click:Connect(function()
+    local Http = game:GetService("HttpService")
+    local Api = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Desc&limit=100"
+    local Servers = Http:JSONDecode(game:HttpGet(Api))
+    for _, s in pairs(Servers.data) do
+        if s.playing < s.maxPlayers and s.id ~= game.JobId then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, Player)
+            break
+        end
+    end
+end)
