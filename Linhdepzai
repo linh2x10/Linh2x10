@@ -1,0 +1,119 @@
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+local PlayerGui = Player:WaitForChild("PlayerGui")
+if PlayerGui:FindFirstChild("LinhPremiumFinal") then PlayerGui.LinhPremiumFinal:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LinhPremiumFinal"
+ScreenGui.Parent = PlayerGui
+ScreenGui.ResetOnSpawn = false
+
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 220, 0, 170)
+Main.Position = UDim2.new(0.5, -110, 0.2, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+Main.Active = true
+Main.Draggable = true
+
+local MainStroke = Instance.new("UIStroke", Main)
+MainStroke.Thickness = 4
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 45)
+Title.Text = "Linhdepzai Hub (primium)"
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+
+local function CreateBtn(name, pos)
+    local btn = Instance.new("TextButton", Main)
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Position = pos
+    btn.Text = name .. ": OFF"
+    btn.Font = Enum.Font.GothamBold
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    local st = Instance.new("UIStroke", btn)
+    st.Thickness = 2
+    return btn, st
+end
+
+local KillBtn, KillStroke = CreateBtn("DIỆT SIÊU TỐC ++", UDim2.new(0.05, 0, 0.3, 0))
+local SpeedBtn, SpeedStroke = CreateBtn("CHẠY NHANH", UDim2.new(0.05, 0, 0.65, 0))
+
+local kill_on, speed_on = false, false
+
+RunService.RenderStepped:Connect(function()
+    local color = Color3.fromHSV(tick() % 3 / 3, 1, 1)
+    MainStroke.Color = color
+    KillStroke.Color = color
+    SpeedStroke.Color = color
+    Title.TextColor3 = color
+end)
+
+local function ApplyESP(p)
+    if p == Player then return end
+    local function Update()
+        pcall(function()
+            local char = p.Character or p.CharacterAdded:Wait()
+            local hl = char:FindFirstChild("LinhESP") or Instance.new("Highlight", char)
+            hl.Name = "LinhESP"
+            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            hl.FillTransparency = 0.4
+            
+            RunService.Heartbeat:Connect(function()
+                if hl.Parent then
+                    local c = Color3.fromHSV(tick() % 3 / 3, 1, 1)
+                    hl.FillColor = c
+                    hl.OutlineColor = c
+                    for _, v in pairs(char:GetDescendants()) do
+                        if v:IsA("BasePart") and v.Transparency > 0.4 then v.Transparency = 0.5 end
+                    end
+                end
+            end)
+        end)
+    end
+    p.CharacterAdded:Connect(Update)
+    Update()
+end
+
+KillBtn.MouseButton1Click:Connect(function()
+    kill_on = not kill_on
+    KillBtn.Text = kill_on and "DIỆT SIÊU TỐC ++: ON" or "DIỆT SIÊU TỐC ++: OFF"
+end)
+
+SpeedBtn.MouseButton1Click:Connect(function()
+    speed_on = not speed_on
+    SpeedBtn.Text = speed_on and "CHẠY NHANH: ON" or "CHẠY NHANH: OFF"
+end)
+
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local char = Player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        
+        if speed_on then char.Humanoid.WalkSpeed = 150 end
+        
+        if kill_on then
+            local tool = char:FindFirstChildOfClass("Tool") or Player.Backpack:FindFirstChildOfClass("Tool")
+            if tool then
+                tool.Parent = char
+                for _, v in pairs(Players:GetPlayers()) do
+                    if v ~= Player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character.Humanoid.Health > 0 then
+                        root.CFrame = v.Character.HumanoidRootPart.CFrame
+                        tool:Activate()
+                        pcall(function() tool:Hit() end) 
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+for _, p in pairs(Players:GetPlayers()) do ApplyESP(p) end
+Players.PlayerAdded:Connect(ApplyESP)
