@@ -1,0 +1,159 @@
+-- Khởi tạo và bảo mật Menu
+local CoreGui = game:GetService("CoreGui")
+if CoreGui:FindFirstChild("LinhPremiumV24") then CoreGui.LinhPremiumV24:Destroy() end
+
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+
+-- 1. INTRO CHỮ 7 MÀU (RGB)
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "LinhPremiumV24"
+
+local function ShowIntro()
+    local txt = Instance.new("TextLabel", ScreenGui)
+    txt.Size = UDim2.new(1, 0, 0.2, 0)
+    txt.Position = UDim2.new(0, 0, 0.4, 0)
+    txt.Text = "LINHDEPZAI (PRIMIUM)"
+    txt.TextSize = 55
+    txt.Font = Enum.Font.GothamBold
+    txt.BackgroundTransparency = 1
+    
+    pcall(function()
+        local s = Instance.new("Sound", game:GetService("SoundService"))
+        s.SoundId = "rbxassetid://13105731307" 
+        s.Volume = 5
+        s:Play()
+    end)
+
+    task.spawn(function()
+        for i = 1, 60 do
+            txt.TextColor3 = Color3.fromHSV(tick() % 1, 1, 1)
+            task.wait(0.02)
+        end
+    end)
+    task.wait(1.5)
+    TweenService:Create(txt, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+end
+task.spawn(ShowIntro)
+
+-- 2. GIAO DIỆN GÓC PHẢI VỚI CHỮ 7 MÀU
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 210, 0, 210)
+Main.Position = UDim2.new(0.75, 0, 0.1, 0)
+Main.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+Main.BackgroundTransparency = 0.2
+Main.Active, Main.Draggable = true, true
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Thickness = 3
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Text = "Linhdepzai (primium)"
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+
+local function CreateBtn(name, pos, color)
+    local btn = Instance.new("TextButton", Main)
+    btn.Size = UDim2.new(0.9, 0, 0, 30)
+    btn.Position = pos
+    btn.BackgroundColor3 = color or Color3.fromRGB(35, 35, 35)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = name
+    btn.BorderSizePixel = 0
+    Instance.new("UIStroke", btn).Thickness = 1.5
+    return btn
+end
+
+local KillStayBtn = CreateBtn("QUÉT SẠCH MAP", UDim2.new(0.05, 0, 0.22, 0))
+local KillTeleBtn = CreateBtn("DIỆT SIÊU TỐC", UDim2.new(0.05, 0, 0.40, 0))
+local SpeedBtn = CreateBtn("CHẠY NHANH: OFF", UDim2.new(0.05, 0, 0.58, 0))
+local HopBtn = CreateBtn("CHUYỂN SERVER NHANH", UDim2.new(0.05, 0, 0.80, 0), Color3.fromRGB(80, 0, 0))
+
+local kill_tele_on, kill_stay_on, speed_on = false, false, false
+
+-- 3. HỆ THỐNG RGB TOÀN DIỆN & FIX CHẠY NHANH
+RunService.Stepped:Connect(function()
+    local color = Color3.fromHSV(tick() % 3 / 3, 1, 1)
+    Stroke.Color = color
+    Title.TextColor3 = color
+    KillStayBtn.TextColor3 = color
+    KillTeleBtn.TextColor3 = color
+    SpeedBtn.TextColor3 = color
+
+    if speed_on and Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = 100
+    end
+
+    -- ESP
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= Player and v.Character then
+            local hl = v.Character:FindFirstChild("LinhESP") or Instance.new("Highlight", v.Character)
+            hl.Name = "LinhESP"
+            hl.FillColor = color
+            hl.OutlineColor = Color3.new(1, 1, 1)
+            hl.DepthMode = 0
+        end
+    end
+end)
+
+-- 4. TĂNG TẦM ĐÁNH (MAX RANGE) & QUÉT MAP ỔN ĐỊNH
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local char = Player.Character
+        local tool = char:FindFirstChildOfClass("Tool") or Player.Backpack:FindFirstChildOfClass("Tool")
+        if not tool or not (kill_tele_on or kill_stay_on) then return end
+        
+        tool.Parent = char
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= Player and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
+                local targetHRP = v.Character.HumanoidRootPart
+                
+                -- Tính khoảng cách để quét xa hơn
+                local distance = (char.HumanoidRootPart.Position - targetHRP.Position).Magnitude
+                
+                if kill_stay_on and distance < 10000 then -- Tăng tầm đánh lên cực xa
+                    local originalCF = targetHRP.CFrame
+                    -- Kéo hitbox địch về phía mình để chém (không hiện số Dam)
+                    targetHRP.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+                    tool:Activate()
+                    task.wait()
+                    targetHRP.CFrame = originalCF
+                elseif kill_tele_on then
+                    char.HumanoidRootPart.CFrame = targetHRP.CFrame
+                    tool:Activate()
+                end
+            end
+        end
+    end)
+end)
+
+-- ĐIỀU KHIỂN NÚT BẤM
+KillStayBtn.MouseButton1Click:Connect(function()
+    kill_stay_on = not kill_stay_on
+    KillStayBtn.BackgroundColor3 = kill_stay_on and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(35, 35, 35)
+    if kill_stay_on then kill_tele_on = false end
+end)
+KillTeleBtn.MouseButton1Click:Connect(function()
+    kill_tele_on = not kill_tele_on
+    KillTeleBtn.BackgroundColor3 = kill_tele_on and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(35, 35, 35)
+    if kill_tele_on then kill_stay_on = false end
+end)
+SpeedBtn.MouseButton1Click:Connect(function()
+    speed_on = not speed_on
+    SpeedBtn.Text = "CHẠY NHANH: " .. (speed_on and "ON" or "OFF")
+    SpeedBtn.BackgroundColor3 = speed_on and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(35, 35, 35)
+end)
+HopBtn.MouseButton1Click:Connect(function()
+    local Servers = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Desc&limit=100"))
+    for _, s in pairs(Servers.data) do
+        if s.playing < s.maxPlayers and s.id ~= game.JobId then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, Player)
+            break
+        end
+    end
+end)
